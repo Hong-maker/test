@@ -1,0 +1,38 @@
+- config:
+    name: 获取用户信息列表
+    base_url: ${ENV(platform_tiger_api_host)}
+
+- test:
+    name: 请求头参数为空
+    api: api/platform_account/get_accounts_list.yml
+    extract:
+        - user_1_id: content.items.0.id
+        - user_2_id: content.items.1.id
+    validate:
+        - eq: [status_code, 200]
+        - contains: [content, total]
+        - length_equals: [content.items, 20]
+        - length_equals: [content.items.0, 14]
+        - greater_than: [$user_1_id, $user_2_id]
+        - contains: [content.items.0, id]
+        - contains: [content.items.0, username]
+        - contains: [content.items.0, phone_number]
+        - contains: [content.items.0, email]
+        - contains: [content.items.0, nickname]
+        - contains: [content.items.0, fullname]
+        - contains: [content.items.0, sex]
+        - contains: [content.items.0, qq]
+- test:
+    name: page=1-per_page大于20
+    request:
+        method: GET
+        url: /accounts/list?page=1&per_page=21
+    validate:
+        - eq: [status_code, 400]    
+- test:
+    name: page大于20-per_page=1
+    request:
+        method: GET
+        url: /accounts/list?page=21&per_page=1
+    validate:
+        - eq: [status_code, 400]  

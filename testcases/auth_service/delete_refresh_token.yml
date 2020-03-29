@@ -1,0 +1,47 @@
+- config:
+    name: 销毁refresh_token
+    base_url: ${ENV(auth_service_host)}
+
+- test:
+    name: 准备工作：生成refresh_token
+    api: api/auth_service/generate_token.yml
+    variables:
+        user_id: ${source_user_id()}
+        client_id: web
+        type: USER
+    validate:
+        - eq: [status_code, 200]
+    extract:
+        - new_generated_fresh_token: content.refresh.token
+
+- test:
+    name: refresh_token未过期
+    api: api/auth_service/delete_refresh_token.yml
+    variables:
+        refresh_token: $new_generated_fresh_token
+    validate:
+        - eq: [status_code, 200]
+
+- test:
+    name: refresh_token不存在或已删除
+    api: api/auth_service/delete_refresh_token.yml
+    variables:
+        refresh_token: 'aaa'
+    validate:
+        - eq: [status_code, 200]
+
+- test:
+    name: refresh_token为空字符串
+    api: api/auth_service/delete_refresh_token.yml
+    variables:
+        refresh_token: ''
+    validate:
+        - eq: [status_code, 400]
+
+- test:
+    name: refresh_token不传递
+    request:
+        method: DELETE
+        url: /tokens
+    validate:
+        - eq: [status_code, 400]

@@ -1,0 +1,41 @@
+- config:
+    name: 发送登录验证码
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - test_phone_number: ${ENV(test_phone_number)}
+
+# 手机已注册
+- test:
+    name: 准备工作：注册手机号
+    skipIf: ${is_geetest_account_v2_on()}
+    setup_hooks:
+        - ${clear_phone_number($test_phone_number)}
+    api: api/platform_account/register_phone_number.yml
+    variables:
+        - phone_number: $test_phone_number
+    validate:
+        - eq: [status_code, 200]
+
+- test:
+    name: 手机号已注册
+    skipIf: ${is_geetest_account_v2_on()}
+    api: api/account_api/backend/send_login_captcha.yml
+    variables:
+        - phone_number: $test_phone_number
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.message, sent]
+
+# 手机号未注册
+- test:
+    name: 手机号未注册
+    skipIf: ${is_geetest_account_v2_on()}
+    setup_hooks:
+        - ${clear_phone_number($test_phone_number)}
+    api: api/account_api/backend/send_login_captcha.yml
+    variables:
+        - phone_number: $test_phone_number
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.message, sent]

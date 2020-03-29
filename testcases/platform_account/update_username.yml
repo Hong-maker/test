@@ -1,0 +1,51 @@
+- config:
+    name: 设置用户名
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        - uneixst_user_id: 100
+        - unused_username: test_112233445566
+        - wrong_type_username: '100'
+
+- test:
+    name: 用户id存在(用户已设置用户名)-username未使用
+    request:
+        method: PATCH
+        url: /accounts/${source_user_id()}/username
+        json:
+            username: $unused_username
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, Account_3]
+
+- test:
+    name: 用户id存在(用户已设置用户名)-username已使用
+    request:
+        method: PATCH
+        url: /accounts/${source_user_id()}/username
+        json:
+            username: ${source_user_username()}
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, Account_4]
+
+- test:
+    name: 用户id存在(用户已设置用户名)-username格式错误
+    request:
+        method: PATCH
+        url: /accounts/${source_user_id()}/username
+        json:
+            username: $wrong_type_username
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, Param-Invalid@Common]
+
+- test:
+    name: 用户id不存在-username未使用
+    request:
+        method: PATCH
+        url: /accounts/$uneixst_user_id/username
+        json:
+            username: $unused_username
+    validate:
+        - eq: [status_code, 422]
+        - eq: [content.error_code, '10001000']

@@ -1,0 +1,53 @@
+- config:
+    name: 获取用户对战记录（Public）
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - unexist_user_id: 100
+        - wrong_type_user_id: aaa
+
+- test:
+    name: 未登录-用户id存在
+    request:
+        method: GET
+        url: /tiger/ar/record/${source_user_id()}
+    validate:
+        - eq: [status_code, 200]
+
+- test:
+    name: 未登录-用户id不存在
+    request:
+        method: GET
+        url: /tiger/ar/record/$unexist_user_id
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, R_1]
+
+- test:
+    name: 未登录-格式错误用户id
+    request:
+        method: GET
+        url: /tiger/ar/record/$wrong_type_user_id
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, A_5]
+
+- test:
+    name: 已登录-个人user_id
+    request:
+        method: GET
+        url: /tiger/ar/record/${source_user_id()}
+        headers:
+            Authorization: ${source_user_login_token()}
+    validate:
+        - eq: [status_code, 200]
+
+- test:
+    name: 已登录-他人user_id
+    request:
+        method: GET
+        url: /tiger/ar/record/${target_user_id()}
+        headers:
+            Authorization: ${source_user_login_token()}
+    validate:
+        - eq: [status_code, 200]

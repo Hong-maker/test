@@ -1,0 +1,251 @@
+- config:
+    name: 更新用户信息
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        - unsupport_sex: 2
+        - new_password: m12345
+        - existed_nickname: 哈哈
+        - unregistered_phone_number: 14011111111
+
+# 修改昵称
+- test:
+    name: nickname为空字符串
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            nickname: ""
+    validate:
+        - eq: [status_code, 400]
+
+- test:
+    name: nickname长度超过20位
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            nickname: "111111111122222222223"
+    validate:
+        - eq: [status_code, 400]
+
+- test:
+    name: nickname已经存在
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            nickname: $existed_nickname
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, Account_22]
+
+# 修改性别
+- test:
+    name: 用户存在-sex为0
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            sex: 0
+    validate:
+        - eq: [status_code, 204]
+- test:
+    name: 用户存在-sex为1
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            sex: 1
+    validate:
+        - eq: [status_code, 204]
+- test:
+    name: 用户存在-sex为2
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            sex: 2
+    validate:
+        - eq: [status_code, 400]
+
+# 修改用户头像
+- test:
+    name: avatar_url为空字符串
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            avatar_url: ""
+    validate:
+        - eq: [status_code, 400]
+
+- test:
+    name: avatar_url非http格式
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            avatar_url: "11"
+    validate:
+        - eq: [status_code, 400]
+
+- test:
+    name: avatar_url为http格式
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            avatar_url: "https://static-user-center.codemao.cn/user_0003.png"
+    validate:
+        - eq: [status_code, 204]
+
+# 修改出生日期
+- test:
+    name: birthday为0
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            birthday: 0
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: birthday为负数
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            birthday: -28800
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: birthday为负数，超过数据库int类型最小限制
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            birthday: -2147483649
+    validate:
+        - eq: [status_code, 400]
+
+- test:
+    name: birthday为正数，超过数据库int类型最大限制
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            birthday: 2147483648
+    validate:
+        - eq: [status_code, 400]
+
+# 绑定手机号、换绑手机号
+- test:
+    name: 用户未绑定手机号-phone_number未注册
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            phone_number: $unregistered_phone_number
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 用户未绑定手机号-phone_number已注册
+    request:
+        method: PUT
+        url: /accounts/${target_user_id()}
+        json:
+            phone_number: $unregistered_phone_number
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, Account_7]
+
+- test:
+    name: 用户已绑定手机号-phone_number已注册是当前手机号
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            phone_number: $unregistered_phone_number
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 清理数据：解绑手机号
+    api: api/platform_account/delete_phone_number.yml
+    variables:
+        - user_id: ${source_user_id()}
+    validate:
+        - eq: [status_code, 204]
+
+# 通过手机号修改密码/重置密码
+- test:
+    name: 用户存在-password长度为6
+    api: api/platform_account/reset_user_password.yml
+    variables:
+        user_id: ${source_user_id()}
+        password: $new_password
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 验证修改用户密码后，用户可以使用新密码登录
+    api: api/account_api/account_login.yml
+    variables:
+        identity: ${source_user_username()}
+        password: $new_password
+    validate:
+        - eq: [status_code, 200]
+        - contains: [content, token]
+
+- test:
+    name: 验证修改用户密码后，用户使用旧密码登录失败
+    api: api/account_api/account_login.yml
+    variables:
+        identity: ${source_user_username()}
+        password: ${source_user_password()}
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, AC_1]
+
+- test: 
+    name: 清理数据：将用户的密码重置为修改前的密码
+    api: api/platform_account/reset_user_password.yml
+    variables:
+        user_id: ${source_user_id()}
+        password: ${source_user_password()}
+    validate:
+        - eq: [status_code, 204]
+        
+- test:
+    name: 验证重置用户密码后，用户可以使用之前的密码可以登录
+    api: api/account_api/account_login.yml
+    variables:
+        identity: ${source_user_username()}
+        password: ${source_user_password()}
+    validate:
+        - eq: [status_code, 200]
+        - contains: [content, token]
+
+# 修改用户封面作品
+- test:
+    name: 重置封面作品为0
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            preview_work_id: 0
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: preview_work_id为负数
+    request:
+        method: PUT
+        url: /accounts/${source_user_id()}
+        json:
+            preview_work_id: -1
+    validate:
+        - eq: [status_code, 400]

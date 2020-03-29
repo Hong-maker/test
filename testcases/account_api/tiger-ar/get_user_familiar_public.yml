@@ -1,0 +1,73 @@
+- config:
+    name: 获取用户代表精灵信息(Public)
+    base_url: ${ENV(tiger_api_host)} 
+    verify: False     
+    variables:
+        - unexist_user_id: 100
+        - wrong_type_user_id: aaa
+
+- test:
+    name: 未登录-用户id存在(用户有代表精灵)
+    request:
+        method: GET
+        url: /tiger/ar/familiar/${source_user_id()}
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.0.user_id, '${source_user_id()}']
+        - length_equals: [content, 1]
+        - length_equals: [content.0, 6]
+        - contains: [content.0, familiar_sprite]
+        - contains: [content.0, name]
+
+- test:
+    name: 未登录-用户id存在(用户无代表精灵)
+    request:
+        method: GET
+        url: /tiger/ar/familiar/${target_user_id()}
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 0]
+        - type_match: [content, list]
+
+- test:
+    name: 未登录-用户id不存在
+    request:
+        method: GET
+        url: /tiger/ar/familiar/$unexist_user_id
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, R_1]
+
+- test:
+    name: 未登录-用户id格式错误
+    request:
+        method: GET
+        url: /tiger/ar/familiar/$wrong_type_user_id
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, A_5]
+
+- test:
+    name: 已登录-个人user_id
+    request:
+        method: GET
+        url: /tiger/ar/familiar/${source_user_id()}
+        headers:
+            Authorization: ${source_user_login_token()}
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.0.user_id, '${source_user_id()}']
+        - length_equals: [content, 1]
+        - contains: [content.0, familiar_sprite]
+        - contains: [content.0, name]
+
+- test:
+    name: 已登录-他人user_id
+    request:
+        method: GET
+        url: /tiger/ar/familiar/${target_user_id()}
+        headers:
+            Authorization: ${source_user_login_token()}
+    validate:
+        - eq: [status_code, 200]
+        - type_match: [content, list]

@@ -1,0 +1,17 @@
+- config:
+    name: 设置用户名
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+
+- test:
+    name: 已登录(用户未设置用户名)-username符合规则
+    request:
+        method: PATCH
+        url: /tiger/v3/app/accounts/username
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            username: sss1221
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, AC3_5]

@@ -1,0 +1,27 @@
+- config:
+    name: 获取用户信息
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+
+- test:
+    name: 未登录
+    request:
+        method: GET
+        url: /tiger/user
+    validate:
+        - eq: [status_code, 204]
+- test:
+    name: 已登录用户
+    request:
+        method: GET
+        url: /tiger/user
+        headers:
+            Authorization: ${source_user_login_token()}
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.id, '${source_user_id()}']
+        - eq: [content.username, '${source_user_username()}']
+        - length_equals: [content, 13]
+        - contains: [content, nickname]
+        - contains: [content, current_activity]
+        - contains: [content, gold]

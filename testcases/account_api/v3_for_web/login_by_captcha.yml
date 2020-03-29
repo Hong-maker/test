@@ -1,0 +1,133 @@
+- config:
+    name: 手机号登录（非静默注册版本）
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - unregister_phone_number: ${ENV(test_phone_number)}
+        - wrong_captcha: '123456'
+        - existed_pid: unknown
+
+- test:
+    name: 准备工作1：注册手机号
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_phone_number($unregister_phone_number)}
+    api: api/platform_account/register_phone_number.yml
+    variables:
+        - phone_number: $unregister_phone_number
+    validate:
+        - eq: [status_code, 200]
+
+- test:
+    name: 准备工作2：发送登录验证码（非静默注册版本）
+    skipUnless: ${is_dev_or_test()}
+    api: api/account_api/v3_for_web/send_login_captcha.yml
+    variables:
+        - phone_number: $unregister_phone_number
+    validate:
+        - eq: [status_code, 204]
+
+# 登录成功，签发旧登录态
+- test:
+    name: 请求头Auth-Version不传递-手机号已注册-验证码正确-auth_version不传递
+    skipUnless: ${is_dev_or_test()}
+    request:
+        method: POST
+        url: /tiger/v3/web/accounts/phone/login
+        json:
+            phone_number: $unregister_phone_number
+            captcha: ${get_captcha_account_v3(login, $unregister_phone_number)}
+            pid: $existed_pid
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 2]
+        - length_equals: [content.user_info, 8]
+        - contains: [content.user_info, id]
+        - contains: [content.user_info, nickname]
+        - contains: [content.user_info, avatar_url]
+        - contains: [content.user_info, sex]
+        - type_match: [content.auth.token, str]
+    teardown_hooks:
+        # 验证：验证码登录成功后，redis中的数据会被清除
+        - ${is_none(${get_captcha_account_v3(login, $unregister_phone_number)})}
+
+- test:
+    name: 手机号已注册-验证码错误
+    skipUnless: ${is_dev_or_test()}
+    request:
+        method: POST
+        url: /tiger/v3/web/accounts/phone/login
+        json:
+            phone_number: $unregister_phone_number
+            captcha: $wrong_captcha
+            pid: $existed_pid
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, AC3_13]
+
+# auth_version=1.0.0，登录成功签发新登录态
+- test:
+    name: 准备工作：发送登录验证码（非静默注册版本）
+    skipUnless: ${is_dev_or_test()}
+    api: api/account_api/v3_for_web/send_login_captcha.yml
+    variables:
+        - phone_number: $unregister_phone_number
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 请求头Auth-Version不传递-手机号已注册-验证码正确-auth_version=1.0.0
+    skipUnless: ${is_dev_or_test()}
+    request:
+        method: POST
+        url: /tiger/v3/web/accounts/phone/login
+        json:
+            phone_number: $unregister_phone_number
+            captcha: ${get_captcha_account_v3(login, $unregister_phone_number)}
+            pid: $existed_pid
+            auth_version: '1.0.0'
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 2]
+        - length_equals: [content.user_info, 8]
+        - contains: [content.user_info, id]
+        - contains: [content.user_info, nickname]
+        - contains: [content.user_info, avatar_url]
+        - contains: [content.user_info, sex]
+        - type_match: [content.auth.token, dict]
+        - contains: [content.auth.token, access]
+        - contains: [content.auth.token, refresh]
+
+# Auth-Version=1.0.0，登录成功签发新登录态
+- test:
+    name: 准备工作：发送登录验证码（非静默注册版本）
+    skipUnless: ${is_dev_or_test()}
+    api: api/account_api/v3_for_web/send_login_captcha.yml
+    variables:
+        - phone_number: $unregister_phone_number
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 请求头Auth-Version=1.0.0-手机号已注册-验证码正确-auth_version不传递
+    skipUnless: ${is_dev_or_test()}
+    request:
+        method: POST
+        url: /tiger/v3/web/accounts/phone/login
+        headers:
+            Auth-Version: '1.0.0'
+        json:
+            phone_number: $unregister_phone_number
+            captcha: ${get_captcha_account_v3(login, $unregister_phone_number)}
+            pid: $existed_pid
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 2]
+        - length_equals: [content.user_info, 8]
+        - contains: [content.user_info, id]
+        - contains: [content.user_info, nickname]
+        - contains: [content.user_info, avatar_url]
+        - contains: [content.user_info, sex]
+        - type_match: [content.auth.token, dict]
+        - contains: [content.auth.token, access]
+        - contains: [content.auth.token, refresh]

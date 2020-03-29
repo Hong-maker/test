@@ -1,0 +1,93 @@
+- config:
+    name: 刷新新登录态access_token（Public）
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - existed_pid: unknown
+
+# scene1
+- test:
+    name: 准备：账号3.0登录成功签发新登录态和旧登录态-auth_version=1.0.0
+    request:
+        method: POST
+        url: /tiger/v3/web/accounts/login
+        json:
+            identity: ${source_user_username()}
+            password: ${source_user_password()}
+            pid: $existed_pid
+            auth_version: '1.0.0'
+    validate:
+        - eq: [status_code, 200]
+        - type_match: [content.auth.token, dict]
+    extract:
+        - login_new_auth_refresh_token: content.auth.token.refresh.token
+
+- test:
+    name: refresh_token未过期
+    api: api/account_api/v3_for_web/put_access_token_by_refresh_token.yml
+    variables:
+        refresh_token: $login_new_auth_refresh_token
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 1]
+        - length_equals: [content.access, 3]
+        - contains: [content.access, token]
+        - eq: [content.access.expires_in, 7200]
+        - eq: [content.access.type, Bearer]
+    extract:
+        - res_access_token: content.access.token
+
+- test:
+    name: 验证：获取得到的access_token可以获取用户信息
+    request:
+        method: GET
+        url: /tiger/v3/web/accounts/profile
+        headers:
+            Authorization: Bearer $res_access_token
+    validate:
+        - eq: [status_code, 200]
+
+# scene2
+- test:
+    name: 准备：账号3.0登录成功签发新登录态和旧登录态-auth_version=1.0.0
+    request:
+        method: POST
+        url: /tiger/v3/web/accounts/login
+        json:
+            identity: ${source_user_username()}
+            password: ${source_user_password()}
+            pid: $existed_pid
+            auth_version: '1.0.0'
+    validate:
+        - eq: [status_code, 200]
+        - type_match: [content.auth.token, dict]
+    extract:
+        - login_new_auth_refresh_token: content.auth.token.refresh.token
+
+- test:
+    name: 用户使用新登录态退出登录-refresh_token为新签发的登录态
+    request:
+        url: /tiger/v3/web/accounts/logout
+        method: POST
+        json:
+            refresh_token: $login_new_auth_refresh_token
+    validate:
+        - eq: [status_code, 200]
+
+- test:
+    name: refresh_token已过期
+    api: api/account_api/v3_for_web/put_access_token_by_refresh_token.yml
+    variables:
+        refresh_token: $login_new_auth_refresh_token
+    validate:
+        - eq: [status_code, 422]
+        - eq: [content.error_code, '10000001']
+
+- test:
+    name: refresh_token为空字符串
+    api: api/account_api/v3_for_web/put_access_token_by_refresh_token.yml
+    variables:
+        refresh_token: ''
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, 'A_5']

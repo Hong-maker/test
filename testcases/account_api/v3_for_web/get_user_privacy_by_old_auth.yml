@@ -1,0 +1,80 @@
+- config:
+    name: 获取用户主账号信息（私密信息）
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - existed_pid: unknown
+
+- test:
+    name: 准备工作：用户登录-签发旧登录态
+    request:
+        method: POST
+        url: /tiger/v3/web/accounts/login
+        json:
+            identity: ${source_user_username()}
+            password: ${source_user_password()}
+            pid: $existed_pid
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content, $json_content]
+    extract:
+        - login_token_by_old_auth: json.auth.token
+        - json_content: json
+
+# 请求头headers中，默认会传递上一个teststep返回的Cookie，所以这里请求头中可以不指定
+- test:
+    name: 不传递Authorization-传递正确的Cookie
+    request:
+        url: /tiger/v3/web/accounts/privacy
+        method: GET
+    validate:
+        - eq: [status_code, 200]
+        - eq: [json.username, '${source_user_username()}']
+        - eq: [json.has_password, true]
+        - contains: [json, email]
+        - contains: [json, phone_number]
+        - length_equals: [json, 4]
+  
+# 请求头headers中，既会传递Authorization，也会传递登录返回的Cookie      
+- test:
+    name: 传递正确的Authorization-正确的Cookie
+    request:
+        url: /tiger/v3/web/accounts/privacy
+        method: GET
+        headers:
+            Authorization: Bearer $login_token_by_old_auth
+    validate:
+        - eq: [status_code, 200]
+        - eq: [json.username, '${source_user_username()}']
+        - eq: [json.has_password, true]
+        - contains: [json, email]
+        - contains: [json, phone_number]
+        - length_equals: [json, 4]
+
+# 服务端会先校验Authorization，再校验Cookie
+- test:
+    name: 传递正确的Authorization-传递错误的Cookie
+    request:
+        url: /tiger/v3/web/accounts/privacy
+        method: GET
+        headers:
+            Authorization: Bearer $login_token_by_old_auth
+            Cookie: aaa
+    validate:
+        - eq: [status_code, 200]
+        - eq: [json.username, '${source_user_username()}']
+        - eq: [json.has_password, true]
+        - contains: [json, email]
+        - contains: [json, phone_number]
+        - length_equals: [json, 4]
+
+- test:
+    name: 传递错误的Authorization-传递正确的Cookie
+    request:
+        url: /tiger/v3/web/accounts/privacy
+        method: GET
+        headers:
+            Authorization: aaa
+    validate:
+        - eq: [status_code, 403]
+        - eq: [json.error_code, E_1]

@@ -1,0 +1,73 @@
+- config:
+    name: 账户注册(为B端定制，通用型较低)
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        - test_phone_number: ${ENV(test_phone_number)}
+        - wrong_email_type: ma
+        - wrong_password_value: 12
+        - correct_password_value: m1234567
+
+- test:
+    name: 手机号未注册-identity_type一致
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_phone_number($test_phone_number)}
+    request:
+        method: POST
+        url: /accounts/register
+        json:
+            identity_type: 1
+            identity: $test_phone_number
+            pid: 65edCTyg
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.is_create, true]
+        - eq: [content.has_password, false]
+        - length_equals: [content, 4]
+        - contains: [content, id]
+
+- test:
+    name: 手机号已注册-identity_type一致
+    skipUnless: ${is_dev_or_test()}
+    request:
+        method: POST
+        url: /accounts/register
+        json:
+            identity_type: 1
+            identity: $test_phone_number
+            pid: 65edCTyg
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.is_create, false]
+        - eq: [content.has_password, false]
+        - length_equals: [content, 4]
+        - contains: [content, id]
+
+- test:
+    name: 手机号未注册-identity_type不一致
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_phone_number($test_phone_number)}
+    request:
+        method: POST
+        url: /accounts/register
+        json:
+            identity_type: 2
+            identity: $test_phone_number
+            pid: 65edCTyg
+    validate:
+        - eq: [status_code, 422]
+        - eq: [content.error_code, '10001010']
+
+- test:
+    name: 邮箱已注册
+    request:
+        method: POST
+        url: /accounts/register
+        json:
+            identity_type: 2
+            identity: ${source_user_email()}
+            pid: 65edCTyg
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.is_create, false]

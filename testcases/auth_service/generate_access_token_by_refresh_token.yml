@@ -1,0 +1,44 @@
+- config:
+    name: 根据refresh_token刷新access_token
+    base_url: ${ENV(auth_service_host)}
+
+- test:
+    name: 准备工作：生成refresh_token
+    api: api/auth_service/generate_token.yml
+    variables:
+        user_id: ${source_user_id()}
+        client_id: web
+        type: USER
+    validate:
+        - eq: [status_code, 200]
+    extract:
+        - new_generated_fresh_token: content.refresh.token
+
+- test:
+    name: refresh_token未过期-User-Agent不传递
+    api: api/auth_service/generate_access_token_by_refresh_token.yml
+    variables:
+        refresh_token: $new_generated_fresh_token
+    validate:
+        - eq: [status_code, 200]
+        - contains: [content, access]
+        - contains: [content.access, token]
+        - eq: [content.access.expires_in, 7200]
+        - eq: [content.access.type, Bearer]
+
+- test:
+    name: refresh_token不合法
+    api: api/auth_service/generate_access_token_by_refresh_token.yml
+    variables:
+        refresh_token: 'aaa'
+    validate:
+        - eq: [status_code, 422]
+        - eq: [content.error_code, '10000001']
+
+- test:
+    name: refresh_token为空字符串
+    api: api/auth_service/generate_access_token_by_refresh_token.yml
+    variables:
+        refresh_token: ''
+    validate:
+        - eq: [status_code, 400]

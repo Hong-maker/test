@@ -1,0 +1,85 @@
+- config:
+    name: 账号登录
+    base_url: ${ENV(tiger_api_host)}  
+    verify: False
+    variables:
+        - unregister_phone_number: ${ENV(test_phone_number)}
+        - correct_password: 'm1234567' 
+        - source_user_wrong_password: "kkk"
+        - unexist_username: '12621699'
+
+- test:
+    name: 用户名登录：用户名正确-密码错误
+    api: api/account_api/account_login.yml
+    variables:
+        - identity: ${source_user_username()}
+        - password: $source_user_wrong_password
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, AC_1]
+
+- test:
+    name: 用户名登录：用户名错误-密码错误
+    api: api/account_api/account_login.yml
+    variables:
+        - identity: $unexist_username
+        - password: $source_user_wrong_password
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, AC_1]
+
+- test:
+    name: 用户名登录：用户名正确-密码正确
+    api: api/account_api/account_login.yml
+    variables:
+        - identity: ${source_user_username()}
+        - password: ${source_user_password()}
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 4]
+        - contains: [content, token]
+    extract:
+        - token: content.token
+
+- test:
+    name: 验证登录成功后获取用户信息
+    request:
+        method: GET
+        url: /tiger/user
+        headers:
+            Authorization: Bearer $token
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.id, '${source_user_id()}']
+        - eq: [content.username, '${source_user_username()}']
+        - length_equals: [content, 13]
+
+# 手机号注册用户登录，只在dev测试
+- test: 
+    name: 手机号注册设置密码
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_phone_number($unregister_phone_number)}
+    api: api/platform_account/register_phone_number_with_password.yml
+    variables:
+        - phone_number: $unregister_phone_number
+        - password: $correct_password
+    validate:
+        - eq: [status_code, 200]
+        - contains: [content, id]
+    extract:
+        - created_user_id: content.id
+
+- test:
+    name: 手机号正确-密码正确
+    skipUnless: ${is_dev_or_test()}
+    api: api/account_api/account_login.yml
+    variables:
+        - identity: $unregister_phone_number
+        - password: $correct_password
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 4]
+        - contains: [content, token]
+    teardown_hooks:
+        - ${clear_phone_number($unregister_phone_number)}

@@ -1,0 +1,57 @@
+- config:
+    name: 批量检测用户名是否存在
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        - unexist_username: 'test_create_123'
+
+- test:
+    name: usernames包含一个元素-username已注册
+    request:
+        method: POST
+        url: /accounts/usernames/check
+        json:
+            usernames: ['${source_user_username()}']
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 1]
+        - eq: [content.0.username, '${source_user_username()}']
+        - eq: [content.0.is_exist, true]
+
+- test:
+    name: usernames包含一个元素-username未注册
+    request:
+        method: POST
+        url: /accounts/usernames/check
+        json:
+            usernames: [$unexist_username]
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 1]
+        - eq: [content.0.username, $unexist_username]
+        - eq: [content.0.is_exist, false]
+
+- test:
+    name: usernames包含两个元素-一个已注册-一个未注册
+    request:
+        method: POST
+        url: /accounts/usernames/check
+        json:
+            usernames: ['${source_user_username()}', $unexist_username]
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 2]
+        - eq: [content.0.username, '${source_user_username()}']
+        - eq: [content.0.is_exist, true]
+        - eq: [content.1.username, $unexist_username]
+        - eq: [content.1.is_exist, false]
+
+- test:
+    name: usernames为空数组
+    request:
+        method: POST
+        url: /accounts/usernames/check
+        json:
+            usernames: []
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, Param-Invalid@Common]

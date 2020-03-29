@@ -1,0 +1,43 @@
+- config:
+    name: 检查并返回可用昵称
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        - success_unexisted_nickname: abcd12344
+        - success_existed_nickname: 哈哈
+        # emoji会有编码问题，这里不加这个
+        
+- test:
+    name: 不传递nickname
+    request:
+        method: GET
+        url: /accounts/nickname/available
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 1]
+        - contains: [content, nickname]
+
+- test:
+    name: nickname格式正确且不存在
+    request:
+        method: GET
+        url: /accounts/nickname/available?nickname=$success_unexisted_nickname
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.nickname, $success_unexisted_nickname]
+
+- test:
+    name: nickname格式正确且已存在
+    request:
+        method: GET
+        url: /accounts/nickname/available?nickname=$success_existed_nickname
+    validate:
+        - eq: [status_code, 200]
+        - not_equals: [content.nickname, $success_unexisted_nickname]
+
+# - test:
+#     name: nickname为空
+#     request:
+#         method: GET
+#         url: /accounts/nickname/available?nickname=
+#     validate:
+#         - eq: [status_code, 400]

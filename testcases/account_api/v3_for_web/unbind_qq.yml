@@ -1,0 +1,12 @@
+- config:
+    name: 解绑QQ
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+
+- test:
+    name: 用户未绑定QQ
+    api: api/account_api/v3_for_web/unbind_qq.yml
+    variables:
+        - token: ${source_user_login_token()}
+    validate:
+        - eq: [status_code, 204]

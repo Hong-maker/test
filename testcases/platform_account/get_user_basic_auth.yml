@@ -1,0 +1,37 @@
+- config:
+    name: 通过用户ID获取主账号
+    base_url: ${ENV(platform_tiger_api_host)}   
+    variables:
+        - unexist_user_id: 100
+        - wrong_type_user_id: aaa
+
+- test:
+    name: 用户id存在
+    api: api/platform_account/get_user_basic_auth.yml
+    variables: 
+        - user_id: ${source_user_id()}
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.id, '${source_user_id()}']
+        - eq: [content.username, '${source_user_username()}']
+        - eq: [content.has_password, true]
+        - length_equals: [content, 5]
+        - contains: [content, phone_number]
+        - contains: [content, email]
+
+- test:
+    name: 用户id不存在(大于0)
+    api: api/platform_account/get_user_basic_auth.yml
+    variables: 
+        - user_id: $unexist_user_id
+    validate:
+        - eq: [status_code, 422]
+        - eq: [content.error_code, '10001000']
+
+- test:
+    name: 用户id格式错误
+    api: api/platform_account/get_user_basic_auth.yml
+    variables: 
+        - user_id: $wrong_type_user_id
+    validate:
+        - eq: [status_code, 404]

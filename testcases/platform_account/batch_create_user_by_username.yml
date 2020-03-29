@@ -1,0 +1,235 @@
+- config:
+    name: 通用批量注册用户（B端）
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        - exist_pid: unknown
+        - unexist_pid: abcd
+        - test_create_username: 'create_username'
+        - test_create_username_30: 'm11111111111111111111111111111'
+        - test_correct_password: '123456'
+
+- test:
+    name: users包含一个元素-username已注册-password为用户密码
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': '${source_user_username()}', 'password': '${source_user_password()}'}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 1]
+        - length_equals: [content.0, 3]
+        - eq: [content.0.id, '${source_user_id()}']
+        - eq: [content.0.username, '${source_user_username()}']
+        - eq: [content.0.is_create, false]
+
+- test:
+    name: users包含一个元素-username已注册-password不是用户密码
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': '${source_user_username()}', 'password': '111111'}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 1]
+        - length_equals: [content.0, 3]
+        - eq: [content.0.id, '${source_user_id()}']
+        - eq: [content.0.username, '${source_user_username()}']
+        - eq: [content.0.is_create, false]
+
+- test:
+    name: users包含一个元素-username已注册-password不传递
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': '${source_user_username()}'}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, Message-Unreadable@Common]
+
+- test:
+    name: users包含一个元素-username长度小于6位-password格式正确
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': 'm123', 'password': '123456'}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, Param-Invalid@Common]
+
+- test:
+    name: users包含一个元素-username长度大于30位-password格式正确
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': 'm111111111111111111111111111112', 'password': '123456'}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, Param-Invalid@Common]
+
+- test:
+    name: users包含一个元素-username长度为6但格式不正确-password格式正确
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': '123456', 'password': '123456'}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, Param-Invalid@Common]
+
+- test:
+    name: users包含一个元素-username未注册-password为空字符串
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_username($test_create_username)}
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': $test_create_username, 'password': ''}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, Param-Invalid@Common]
+
+- test:
+    name: users包含一个元素-username未注册-password长度小于6
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_username($test_create_username)}
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': $test_create_username, 'password': '123'}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, Param-Invalid@Common]
+
+- test:
+    name: users包含一个元素-username未注册-password长度大于20
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_username($test_create_username)}
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': $test_create_username, 'password': '111111111111111111112'}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, Param-Invalid@Common]
+
+- test:
+    name: users包含一个元素-username未注册-password格式正确
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_username($test_create_username)}
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': $test_create_username, 'password': $test_correct_password}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.0.username, $test_create_username]
+        - eq: [content.0.is_create, true]
+    extract:
+        - created_user_id1: content.0.id
+
+- test:
+    name: users包含一个元素-username未注册长度为30-password格式正确
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_username($test_create_username_30)}
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': $test_create_username_30, 'password': $test_correct_password}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.0.username, $test_create_username_30]
+        - eq: [content.0.is_create, true]
+    extract:
+        - created_user_id2: content.0.id
+
+- test:
+    name: 验证：注册成功的用户，使用用户名+密码可以登录成功
+    skipUnless: ${is_dev_or_test()}
+    api: api/account_api/account_login.yml
+    variables:
+        - identity: $test_create_username
+        - password: $test_correct_password
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.user_info.id, $created_user_id1]
+    teardown_hooks:
+        - ${clear_username($test_create_username)}
+
+- test:
+    name: 验证：注册成功的用户，使用用户名+密码可以登录成功
+    skipUnless: ${is_dev_or_test()}
+    api: api/account_api/account_login.yml
+    variables:
+        - identity: $test_create_username_30
+        - password: $test_correct_password
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.user_info.id, $created_user_id2]
+    teardown_hooks:
+        - ${clear_username($test_create_username_30)}
+
+- test:
+    name: users包含一个元素-username已注册-password符合规则-pid不存在
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': '${source_user_username()}', 'password': '123456'}]
+            pid: $unexist_pid
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, Account_12]
+
+- test:
+    name: users包含两个元素-username均已注册-两个username不同
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': '${source_user_username()}', 'password': '${source_user_password()}'},{'username': '${target_user_username()}', 'password': '${target_user_password()}'}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 2]
+        - length_equals: [content.0, 3]
+        # - eq: [content.0.username, '${source_user_username()}']
+        # - eq: [content.1.username, '${target_user_username()}']
+
+- test:
+    name: users包含两个元素-username均已注册-两个username相同
+    request:
+        method: POST
+        url: /accounts/batch/register
+        json:
+            users: [{'username': '${source_user_username()}', 'password': '${source_user_password()}'},{'username': '${source_user_username()}', 'password': '${source_user_password()}'}]
+            pid: $exist_pid
+    validate:
+        - eq: [status_code, 422]
+        - eq: [content.error_code, '10001013']

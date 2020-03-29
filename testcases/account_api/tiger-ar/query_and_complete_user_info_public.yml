@@ -1,0 +1,53 @@
+- config:
+    name: 获取用户基本数据（Public）
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - unexist_user_id: 100
+        - wrong_type_user_id: aaa
+
+- test:
+    name: 用户未登录-用户id存在
+    request:
+        method: POST
+        url: /tiger/ar/user/${source_user_id()}
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 用户未登录-用户id不存在
+    request:
+        method: POST
+        url: /tiger/ar/user/$unexist_user_id
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, R_1]
+
+- test:
+    name: 用户未登录-用户id格式错误
+    request:
+        method: POST
+        url: /tiger/ar/user/$wrong_type_user_id
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, A_5]
+
+- test:
+    name: 用户已登录-个人user_id
+    request:
+        method: POST
+        url: /tiger/ar/user/${source_user_id()}
+        headers:
+            Authorization: ${source_user_login_token()}
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 用户已登录-他人user_id
+    request:
+        method: POST
+        url: /tiger/ar/user/${target_user_id()}
+        headers:
+            Authorization: ${source_user_login_token()}
+    validate:
+        - eq: [status_code, 204]

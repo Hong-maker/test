@@ -1,0 +1,8 @@
+name: 登录账号验证
+base_url: ${ENV(platform_tiger_api_host)}
+request:
+    method: POST
+    url: /accounts/auth
+    json:
+        identity: $identity
+        password: $password

@@ -1,0 +1,4 @@
+httprunner>=2.0.0
+requests
+pymysql
+redis

@@ -1,0 +1,13 @@
+- config:
+    name: 获取用户主账号信息（私密信息）
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+
+- test:
+    name: 未登录
+    request:
+        url: /tiger/v3/web/accounts/privacy
+        method: GET
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, E_0]

@@ -1,0 +1,39 @@
+- config:
+    name: 发送登录验证码（静默注册版本）
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - unregister_phone_number: ${ENV(test_phone_number)}
+        - wrong_captcha: '123456'
+
+- test:
+    name: 手机号未注册
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_phone_number($unregister_phone_number)}
+    api: api/account_api/v3_for_web/send_login_silence_captcha.yml
+    variables:
+        - phone_number: $unregister_phone_number
+    validate:
+        - eq: [status_code, 204]
+
+# 手机号已注册
+- test:
+    name: 准备：注册手机号
+    skipUnless: ${is_dev_or_test()}
+    api: api/platform_account/register_phone_number.yml
+    variables:
+        - phone_number: $unregister_phone_number
+    validte:
+        - eq: [status_code, 200]
+
+- test:
+    name: 手机号已注册
+    skipUnless: ${is_dev_or_test()}
+    api: api/account_api/v3_for_web/send_login_silence_captcha.yml
+    variables:
+        - phone_number: $unregister_phone_number
+    validate:
+        - eq: [status_code, 204]
+    teardown_hooks:
+        - ${clear_phone_number($unregister_phone_number)}

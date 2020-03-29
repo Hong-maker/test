@@ -1,0 +1,58 @@
+- config:
+    name: 获取用户基本信息
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - existed_pid: unknown
+
+- test:
+    name: 未登录
+    request:
+        method: GET
+        url: /tiger/v3/web/accounts/profile
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, E_0]
+
+- test:
+    name: 传递登录返回的token-获取用户信息
+    request:
+        method: GET
+        url: /tiger/v3/web/accounts/profile
+        headers:
+            Authorization: ${source_user_login_token()}
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.id, '${source_user_id()}']
+        - length_equals: [content, 8]
+        - contains: [content, nickname]
+        - contains: [content, avatar_url]
+        - contains: [content, sex]
+
+- test:
+    name: 准备工作：登录账号
+    api: api/account_api/v3_for_web/login.yml
+    variables:
+        - identity: ${source_user_username()}
+        - password: ${source_user_password()}
+        - pid: $existed_pid
+    validate:
+        - eq: [status_code, 200]
+    extract: 
+        - login_cookies: headers.Set-Cookie
+
+# 即使不再headers中指定Set-Cookie，也会默认传递之前返回的Set-Cookie
+- test:
+    name: 传递登录后返回的cookies-获取用户信息
+    request:
+        method: GET
+        url: /tiger/v3/web/accounts/profile
+        headers:
+            Cookie: $login_cookies
+    validate:
+        - eq: [status_code, 200]
+        - eq: [json.id, '${source_user_id()}']
+        - length_equals: [json, 8]
+        - contains: [json, nickname]
+        - contains: [json, avatar_url]
+        - contains: [json, sex]

@@ -1,0 +1,17 @@
+- config:
+    name: 账号密码登录（for 参数化）
+    base_url: ${ENV(tiger_api_host)}  
+    verify: False
+    variables:
+        - identity: ${source_user_username()}
+        - password: ${source_user_password()}
+
+- test:
+    name: 账号密码登录成功场景
+    skipUnless: ${is_dev()}
+    api: api/account_api/account_login.yml
+    variables:
+        - identity: $identity
+        - password: $password
+    validate:
+        - eq: [status_code, 200]

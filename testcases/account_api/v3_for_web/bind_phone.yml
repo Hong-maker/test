@@ -1,0 +1,62 @@
+- config:
+    name: 绑定手机号
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - test_phone_number: ${ENV(test_phone_number)}
+        - wrong_captcha: '123456'
+
+- test:
+    name: 准备工作：发送绑定手机验证码（用户已登录-phone_number未注册）
+    skipUnless: ${is_dev_or_test()}
+    setup_hooks:
+        - ${clear_phone_number($test_phone_number)}
+    api: api/account_api/v3_for_web/send_bind_phone_captcha.yml
+    variables:
+        - token: ${source_user_login_token()}
+        - phone_number: $test_phone_number
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 已登录(未绑定手机号)-phone_number未注册-验证码错误
+    skipUnless: ${is_dev_or_test()}
+    request:
+        method: PATCH
+        url: /tiger/v3/web/accounts/phone/bind
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            phone_number: $test_phone_number
+            captcha: $wrong_captcha
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, AC3_13]
+
+- test:
+    name: 已登录(未绑定手机号)-phone_number未注册-验证码正确
+    skipUnless: ${is_dev_or_test()}
+    request:
+        method: PATCH
+        url: /tiger/v3/web/accounts/phone/bind
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            phone_number: $test_phone_number
+            # 获取发送的验证码
+            captcha: ${get_captcha_account_v3(bind_phone, $test_phone_number)}
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 验证：绑定手机号后，可以使用手机号+密码登录
+    skipUnless: ${is_dev_or_test()}
+    api: api/account_api/account_login.yml
+    variables:
+        - identity: $test_phone_number
+        - password: ${source_user_password()}
+    validate:
+        - eq: [status_code, 200]
+    teardown_hooks:
+        - ${clear_phone_number($test_phone_number)}
+

@@ -1,0 +1,255 @@
+- config:
+    name: 修改用户信息
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - existed_nickname: '哈哈'
+        - unexist_nickname: '测试修改昵称1212'
+
+# 修改nickname
+- test:
+    name: 未登录-传递nickname
+    request:
+        method: PUT
+        url: /api/user/info
+        json:
+            nickname: test_update_nickname
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, E_0]
+
+- test:
+    name: 已登录-nickname为空字符串
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            nickname: ''
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 2001]
+
+- test:
+    name: 已登录-nickname符合规则且不存在
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            nickname: $unexist_nickname
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 200]
+
+- test:
+    name: 已登录-nickname已经存在
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            nickname: $existed_nickname
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 3005]
+
+- test:
+    name: 已登录-nickname长度为4但包含黑名单中的空格
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            nickname: "aa bb"
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 2001]
+
+- test:
+    name: 已登录-nickname长度超过20位
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            nickname: "哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈和"
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 2001]
+
+# 修改realname
+- test:
+    name: 已登录-realname为空字符串
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            realname: ''
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 200]
+
+- test:
+    name: 已登录-realname为1位中文
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            realname: '哈'
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 2001]
+
+- test:
+    name: 已登录-realname为2位中文
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            realname: '哈哈'
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 200]
+
+- test:
+    name: 已登录-realname为20位纯中文
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            realname: '哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈'
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 200]
+
+- test:
+    name: 已登录-realname为21位纯中文
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            realname: '哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈和'
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 2001]
+
+- test:
+    name: 已登录-realname为1位英文
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            realname: 'a'
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 200]
+
+- test:
+    name: 已登录-realname为30位英文
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            realname: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 200]
+
+- test:
+    name: 已登录-realname为31位英文
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            realname: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaab'
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 2001]
+
+- test:
+    name: 已登录-realname为3位中英文混合
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            realname: '哈哈a'
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 2001]
+
+# 修改sex
+- test:
+    name: 已登录-sex为0
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            sex: 0
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 200]
+
+- test:
+    name: 已登录-sex为1
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            sex: 0
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 200]
+
+- test:
+    name: 已登录-sex为2
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            sex: 2
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 2001]
+
+- test:
+    name: 已登录-sex为f
+    request:
+        method: PUT
+        url: /api/user/info
+        headers:
+            Authorization: ${source_user_login_token()}
+        json:
+            sex: 'f'
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 2001]

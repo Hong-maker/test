@@ -1,0 +1,106 @@
+- config:
+    name: 通过unionid获取用户信息
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        - test_wexin_unioinid1: test_wx_bind1_0123456789
+        - test_unionid_less_20: '1221'
+        - wexin_appid: wxeda82dc272f7fe92
+        - qq_appid: '101253342'
+        - unsupport_fields_element: aaa
+
+# 后端语言为kotlin时，fields只支持逗号表达式（字段之间不包含空格）
+- test:
+    name: 用户未绑定微信-绑定微信
+    api: api/platform_account/bind_oauth.yml
+    variables:
+        - user_id: ${source_user_id()}
+        - unionid: $test_wexin_unioinid1
+        - openid: $test_wexin_unioinid1
+        - appid: $wexin_appid
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: unionid已注册-fields不传递
+    request:
+        method: GET
+        url: /accounts/oauth/$test_wexin_unioinid1
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 17]
+        - eq: [content.id, '${source_user_id()}']
+        - eq: [content.unionid, $test_wexin_unioinid1]
+        - contains: [content, nickname]
+        - contains: [content, gold]
+
+# - test:
+#     name: unionid已注册-fields为空字符串
+#     request:
+#         method: GET
+#         url: /accounts/oauth/$test_wexin_unioinid1?fields=
+#     validate:
+#         - eq: [status_code, 400]
+
+- test:
+    name: unionid已注册-fields为逗号表达式包含所有支持字段
+    request:
+        method: GET
+        url: /accounts/oauth/$test_wexin_unioinid1?fields=unionid,id,bcmid,nickname,fullname,avatar_url,username,email,phone_number,sex,birthday,description,qq,remark,grade,gold,product_id
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 17]
+        - eq: [content.id, '${source_user_id()}']
+        - eq: [content.unionid, $test_wexin_unioinid1]
+        - contains: [content, nickname]
+        - contains: [content, gold]
+
+- test:
+    name: unionid已注册-fields为逗号表达式只包含id
+    request:
+        method: GET
+        url: /accounts/oauth/$test_wexin_unioinid1?fields=id
+    validate:
+        - eq: [status_code, 200]
+        - length_equals: [content, 1]
+        - eq: [content.id, '${source_user_id()}']
+
+# - test:
+#     name: unionid已注册-fields为逗号表达式包含不支持字段
+#     request:
+#         method: GET
+#         url: /accounts/oauth/$test_wexin_unioinid1?fields=id,$unsupport_fields_element
+#     validate:
+#         - eq: [status_code, 400]
+
+# - test:
+#     name: unionid已注册-fields格式错误
+#     request:
+#         method: GET
+#         url: /accounts/oauth/$test_wexin_unioinid1?fields={"id"}
+#     validate:
+#         - eq: [status_code, 400]
+
+- test:
+    name: 用户解绑微信
+    api: api/platform_account/unbind_oauth.yml
+    variables:
+        - user_id: ${source_user_id()}
+        - oauth_type: WECHAT
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: unionid未注册-fields为逗号表达式包含所有支持字段
+    request:
+        method: GET
+        url: /accounts/oauth/$test_wexin_unioinid1?fields=unionid,id,bcmid,nickname,fullname,avatar_url,username,email,phone_number,sex,birthday,description,qq,remark,grade,gold,product_id
+    validate:
+        - eq: [status_code, 204]
+
+# - test:
+#     name: unionid长度小于20-fields不传递
+#     request:
+#         method: GET
+#         url: /accounts/oauth/$test_unionid_less_20
+#     validate:
+#         - eq: [status_code, 400]

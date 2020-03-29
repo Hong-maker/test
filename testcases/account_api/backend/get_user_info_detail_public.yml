@@ -1,0 +1,30 @@
+- config:
+    name: 获取用户详情（Public）
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - unexist_user_id: 100
+
+- test:
+    name: 未登录-用户存在
+    request:
+        method: GET
+        url: /api/user/info/detail/${source_user_id()}
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 200]
+        - eq: [content.msg, 成功]
+        - eq: [content.data.userInfo.user.id, '${source_user_id()}']
+        - length_equals: [content.data.userInfo, 7]
+
+- test:
+    name: 未登录-用户不存在
+    request:
+        method: GET
+        url: /api/user/info/detail/$unexist_user_id
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.code, 404]
+        - eq: [content.msg, 您访问的资源不存在]
+        - length_equals: [content.data, 0]
+

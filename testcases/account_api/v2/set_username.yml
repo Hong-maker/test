@@ -1,0 +1,17 @@
+- config:
+    name: 设置用户名
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+
+- test:
+    name: 未登录
+    request:
+        method: PATCH
+        url: /tiger/accounts/username/update
+        json:
+            username: ${source_user_username()}
+            captcha: '123456'
+            phone_number: '15889741219'
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, 'E_0']

@@ -1,0 +1,23 @@
+- config:
+    name: 解绑手机号
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        - unexist_user_id: 100
+
+- test:
+    name: 用户名+密码用户(未绑定手机号)
+    api: api/platform_account/delete_phone_number.yml
+    variables:
+        - user_id: ${source_user_id()}
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, Account_41]
+
+- test:
+    name: 用户不存在
+    api: api/platform_account/delete_phone_number.yml
+    variables:
+        - user_id: $unexist_user_id
+    validate:
+        - eq: [status_code, 422]
+        - eq: [content.error_code, '10001000']

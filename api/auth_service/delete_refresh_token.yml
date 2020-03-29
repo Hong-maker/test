@@ -1,0 +1,5 @@
+name: 销毁refresh_token
+base_url: ${ENV(auth_service_host)}
+request:
+    method: DELETE
+    url: /tokens?refresh_token=$refresh_token

@@ -1,0 +1,60 @@
+- config:
+    name: 更换用户代表精灵（Public）
+    base_url: ${ENV(tiger_api_host)}
+    verify: False
+    variables:
+        - unexist_user_id: 100
+        - unexist_sprite_id: 100
+        - wrong_type_sprite_id: aaa
+
+- test:
+    name: 未登录-用户id存在-用户拥有的精灵id
+    request:
+        method: POST
+        url: /tiger/ar/familiar/${source_user_id()}/${source_user_owned_sprite_id()}
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 未登录-用户id存在-用户不拥有的精灵id
+    request:
+        method: POST
+        url: /tiger/ar/familiar/${source_user_id()}/${source_user_unown_sprite_id()}
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, R_3]
+
+- test:
+    name: 未登录-用户id存在-不存在的精灵id
+    request:
+        method: POST
+        url: /tiger/ar/familiar/${source_user_id()}/$unexist_sprite_id
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, R_3]
+
+- test:
+    name: 未登录-用户id存在-格式错误的精灵id
+    request:
+        method: POST
+        url: /tiger/ar/familiar/${source_user_id()}/$wrong_type_sprite_id
+    validate:
+        - eq: [status_code, 400]
+        - eq: [content.error_code, A_5]
+
+- test:
+    name: 未登录-用户id不存在-存在的精灵id
+    request:
+        method: POST
+        url: /tiger/ar/familiar/$unexist_user_id/${source_user_owned_sprite_id()}
+    validate:
+        - eq: [status_code, 403]
+        - eq: [content.error_code, R_1]
+
+- test:
+    name: 已登录-用户id-用户拥有的精灵id
+    request:
+        method: POST
+        url: /tiger/ar/familiar/${source_user_id()}/${source_user_owned_sprite_id()}
+    validate:
+        - eq: [status_code, 204]

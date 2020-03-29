@@ -1,0 +1,122 @@
+- config:
+    name: 获取批量用户最近登录时间
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        - shequ_pid: 65edCTyg
+        - ide_pid: OqMVXvXp
+        - unexist_pid: "123"
+        - unexist_user_id: 1
+
+- test:
+    name: 准备：用户登录社区官网成功
+    api: api/account_api/v3_for_web/login.yml
+    variables:
+        - identity: ${source_user_username()}
+        - password: ${source_user_password()}
+        - pid: $shequ_pid
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.user_info.id, '${source_user_id()}']
+
+- test:
+    name: userIds长度为1，用户存在并且刚登录社区官网-pid为社区官网
+    request:
+        method: POST
+        url: /accounts/login_history/list
+        json:
+            userIds: ['${source_user_id()}']
+            pid: $shequ_pid
+    validate:
+        - eq: [status_code, 200]
+        - type_match: [content, list]
+        - eq: [content.0.id, '${source_user_id()}']
+        - contains: [content.0, latestLoginTime]
+
+- test:
+    name: userIds长度为1，用户存在未登录IDE-pid为IDE
+    request:
+        method: POST
+        url: /accounts/login_history/list
+        json:
+            userIds: ['${source_user_id()}']
+            pid: $ide_pid
+    validate:
+        - eq: [status_code, 200]
+        - type_match: [content, list]
+        - length_equals: [content, 0]
+
+- test:
+    name: userIds长度为1，用户不存在-pid为社区官网
+    request:
+        method: POST
+        url: /accounts/login_history/list
+        json:
+            userIds: [$unexist_user_id]
+            pid: $shequ_pid
+    validate:
+        - eq: [status_code, 200]
+        - type_match: [content, list]
+        - length_equals: [content, 0]
+
+- test:
+    name: userIds长度为1，用户存在并且刚登录社区官网-pid不传递
+    request:
+        method: POST
+        url: /accounts/login_history/list
+        json:
+            userIds: ['${source_user_id()}']
+    validate:
+        - eq: [status_code, 200]
+        - type_match: [content, list]
+        - eq: [content.0.id, '${source_user_id()}']
+        - contains: [content.0, latestLoginTime]
+
+- test:
+    name: userIds长度为1，用户存在并且刚登录社区官网-pid为空字符串
+    request:
+        method: POST
+        url: /accounts/login_history/list
+        json:
+            userIds: ['${source_user_id()}']
+            pid: ""
+    validate:
+        - eq: [status_code, 400]
+
+- test:
+    name: userIds长度为1，用户存在并且刚登录社区官网-pid不存在
+    request:
+        method: POST
+        url: /accounts/login_history/list
+        json:
+            userIds: ['${source_user_id()}']
+            pid: $unexist_pid
+    validate:
+        - eq: [status_code, 200]
+        - type_match: [content, list]
+        - length_equals: [content, 0]
+
+- test:
+    name: userIds长度为2，用户存在并且刚登录社区官网，两个元素相同-pid为社区官网
+    request:
+        method: POST
+        url: /accounts/login_history/list
+        json:
+            userIds: ['${source_user_id()}', '${source_user_id()}']
+            pid: $shequ_pid
+    validate:
+        - eq: [status_code, 200]
+        - type_match: [content, list]
+        - eq: [content.0.id, '${source_user_id()}']
+        - contains: [content.0, latestLoginTime]
+
+- test:
+    name: userIds长度为0-pid为社区官网
+    request:
+        method: POST
+        url: /accounts/login_history/list
+        json:
+            userIds: []
+            pid: $shequ_pid
+    validate:
+        - eq: [status_code, 400]
+

@@ -1,0 +1,97 @@
+- config:
+    name: 解绑第三方账号
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        test_wexin_unioinid1: test_wx_bind1_0123456789
+        test_qq_unioinid1: test_qq_bind1_0123456789
+        wexin_appid: wxeda82dc272f7fe92
+        qq_appid: '101253342'
+        unexist_user_id: 100
+
+# 解绑微信
+- test:
+    name: 解绑微信：用户未绑定微信(有主账号)
+    api: api/platform_account/unbind_oauth.yml
+    variables:
+        user_id: ${source_user_id()}
+        oauth_type: WECHAT
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 用户未绑定微信-绑定微信
+    api: api/platform_account/bind_oauth.yml
+    variables:
+        user_id: ${source_user_id()}
+        unionid: $test_wexin_unioinid1
+        openid: $test_wexin_unioinid1
+        appid: $wexin_appid
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 解绑微信：用户已绑定微信(有主账号)
+    api: api/platform_account/unbind_oauth.yml
+    variables:
+        user_id: ${source_user_id()}
+        oauth_type: WECHAT
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 判断用户解绑微信之后，绑定列表中微信为false
+    api: api/platform_account/get_user_oauth_bind_status.yml
+    variables:
+        - user_id: ${source_user_id()}
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.0.is_bound, false]
+
+- test:
+    name: 解绑微信：用户id不存在
+    api: api/platform_account/unbind_oauth.yml
+    variables:
+        user_id: $unexist_user_id
+        oauth_type: WECHAT
+    validate:
+        - eq: [status_code, 422]
+        - eq: [content.error_code, '10001000']
+
+# 解绑QQ
+- test:
+    name: 解绑QQ：用户未绑定QQ(有主账号)
+    api: api/platform_account/unbind_oauth.yml
+    variables:
+        user_id: ${source_user_id()}
+        oauth_type: QQ
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 用户未绑定QQ-绑定QQ
+    api: api/platform_account/bind_oauth.yml
+    variables:
+        user_id: ${source_user_id()}
+        unionid: $test_qq_unioinid1
+        openid: $test_qq_unioinid1
+        appid: $qq_appid
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 解绑QQ：用户已绑定QQ(有主账号)
+    api: api/platform_account/unbind_oauth.yml
+    variables:
+        user_id: ${source_user_id()}
+        oauth_type: QQ
+    validate:
+        - eq: [status_code, 204]
+
+- test:
+    name: 判断用户解绑QQ之后，绑定列表中QQ为false
+    api: api/platform_account/get_user_oauth_bind_status.yml
+    variables:
+        - user_id: ${source_user_id()}
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.0.is_bound, false]

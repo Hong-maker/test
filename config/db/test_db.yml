@@ -1,0 +1,13 @@
+# 需要开启VPN
+mysql:
+  # 读写权限
+  account:
+    host: rm-bp1orqjl80dle29ur878.mysql.rds.aliyuncs.com
+    user: maxiaoqian
+    password: gB3h0VWWy8dpJAdhPkFsCeTj
+    database: account
+redis:
+  # 读写权限
+  host: r-bp1a97853b5914d4289.redis.rds.aliyuncs.com
+  port: 6379
+  password: 1dVIrGV24PcgOELF5rNphq1L

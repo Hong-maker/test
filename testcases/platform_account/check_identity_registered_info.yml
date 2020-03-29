@@ -1,0 +1,48 @@
+- config:
+    name: 检查主账号(手机号、用户名、邮箱)的注册情况
+    base_url: ${ENV(platform_tiger_api_host)}
+    variables:
+        - unregistered_identity: dcba123
+
+- test:
+    name: 不传递identity
+    request:
+        method: GET
+        url: /accounts/identity/check
+    validate:
+        - eq: [status_code, 400]
+# - test:
+#     name: identity为空字符串
+#     request:
+#         url: /accounts/identity/check?identity=
+#     validate:
+#         - eq: [status_code, 204]
+- test:
+    name: 用户名已注册
+    request:
+        method: GET
+        url: /accounts/identity/check?identity=${source_user_username()}
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.id, '${source_user_id()}']
+        - eq: [content.username, '${source_user_username()}']
+        - length_equals: [content, 5]
+        - contains: [content, phone_number]
+- test:
+    name: email已注册
+    request:
+        method: GET
+        url: /accounts/identity/check?identity=${source_user_email()}
+    validate:
+        - eq: [status_code, 200]
+        - eq: [content.id, '${source_user_id()}']
+        - eq: [content.username, '${source_user_username()}']
+        - length_equals: [content, 5]
+        - contains: [content, phone_number]
+- test:
+    name: 用户名未注册
+    request:
+        method: GET
+        url: /accounts/identity/check?identity=$unregistered_identity
+    validate:
+        - eq: [status_code, 204]
