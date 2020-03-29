@@ -1,8 +1,0 @@
-config:
-    name: 参数化：账号密码登录
-
-testcases:
-    参数化账号密码登录:
-        testcase: testcases/account_api/v2/login_for_parameterize.yml
-        parameters:
-            identity-password: ${P(data/dev_users_identity.csv)}

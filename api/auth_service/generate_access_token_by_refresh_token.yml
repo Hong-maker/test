@@ -1,6 +1,0 @@
-name: 根据refresh_token刷新access_token
-request:
-    method: PUT
-    url: /tokens
-    json:
-        refresh_token: $refresh_token

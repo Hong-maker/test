@@ -1,7 +1,0 @@
-name: 刷新新登录态access_token（Public）
-base_url: ${ENV(tiger_api_host)}
-request:
-    method: PUT
-    url: /tiger/v3/web/accounts/tokens/refresh
-    json:
-        refresh_token: $refresh_token

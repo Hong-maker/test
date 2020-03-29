@@ -1,9 +1,0 @@
-name: 根据用户ID签发token
-base_url: ${ENV(auth_service_host)}
-request:
-    method: POST
-    url: /tokens
-    json:
-        user_id: $user_id
-        client_id: $client_id
-        type: $type
